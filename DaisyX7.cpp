@@ -10,6 +10,7 @@ using namespace daisy;
 
 DaisyPod hw;
 
+/* The OPS ASIC (YM2128) implements the digital oscillators of the DX7. */
 struct {
   float phase[NUM_OPS];
   float mod;
@@ -19,6 +20,8 @@ struct {
   int feedbacklevel;
 } ops;
 
+/* The EGS ASIC (YM2129) is responsible for providing frequency and amplitude
+ * data to the OPS. TODO: modulate frequency and amplitude so we can produces notes instead of drones. */
 struct {
   float freqhz, amp;
 } egs[NUM_OPS];
