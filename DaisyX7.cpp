@@ -36,14 +36,19 @@ float ops_feedback(void) {
 }
 
 float ops_update(int i) {
+  if (i < 0 || i >= nelem(algorithms[0]))
+    return 0;
+
   struct algorithm algo = algorithms[ops.algo][i],
                    previous_algo =
                        algorithms[ops.algo][(i + 1) % nelem(algorithms[0])];
 
-  /* Calculate sample for current operator i based on ops.mod from previous
-   * operator */
+  /* Calculate sample for current operator i based on ops.mod from operator i+1.
+   * For technical reasons the COM value we need for this is stored on the
+   * algorithm of operator i+1.
+   */
   float sample = sinf(pi * (ops.phase[i] + ops.mod)) * egs[i].amp /
-                 ((float)1 + previous_algo.com);
+                 (float)(1 + previous_algo.com);
 
   /* Calculate ops.mod and ops.mem for use in next call to ops_update() */
 
@@ -52,7 +57,7 @@ float ops_update(int i) {
     ops.feedback[0] = sample;
   }
 
-  float mem = (float)algo.c * ops.mem + (float)algo.d * sample;
+  float newmem = (float)algo.c * ops.mem + (float)algo.d * sample;
 
   switch (algo.sel) {
   case 0:
@@ -62,7 +67,7 @@ float ops_update(int i) {
     ops.mod = sample;
     break;
   case 2:
-    ops.mod = mem;
+    ops.mod = newmem;
     break;
   case 3:
     ops.mod = ops.mem;
@@ -74,8 +79,8 @@ float ops_update(int i) {
     ops.mod = ops_feedback() * (ops.feedback[0] + ops.feedback[1]) / 2.0;
     break;
   }
-  ops.mem = mem;
 
+  ops.mem = newmem;
   return ops.mem;
 }
 
@@ -97,7 +102,7 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
 int main(void) {
   hw.Init();
 
-  ops.algo = 0;        /* Algorithm 2 */
+  ops.algo = 0;        /* Algorithm 1 */
   egs[5].freqhz = 110; /* Operator 1: 220Hz, full volume */
   egs[5].amp = 1;
 
