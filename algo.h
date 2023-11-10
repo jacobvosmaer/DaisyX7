@@ -1,9 +1,11 @@
 #ifndef ALGO_H
 #define ALGO_H
 
+#define NUM_OPS 6
+
 struct algorithm {
   int sel, a, c, d, com;
-} algorithms[][6] = {
+} algorithms[][NUM_OPS] = {
     {{1, 1, 0, 0, 0},
      {1, 0, 0, 0, 0},
      {1, 0, 0, 0, 1},

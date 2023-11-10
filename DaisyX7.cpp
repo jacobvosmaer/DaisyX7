@@ -9,7 +9,7 @@ DaisyPod hw;
 struct {
   struct {
     float phase;
-  } osc[6];
+  } osc[NUM_OPS];
   float previous_sample;
   float feedback[2];
   float mem;
