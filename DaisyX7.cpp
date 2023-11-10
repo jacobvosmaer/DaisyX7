@@ -21,7 +21,8 @@ struct {
 } ops;
 
 /* The EGS ASIC (YM2129) is responsible for providing frequency and amplitude
- * data to the OPS. TODO: modulate frequency and amplitude so we can produces notes instead of drones. */
+ * data to the OPS. TODO: modulate frequency and amplitude so we can produces
+ * notes instead of drones. */
 struct {
   float freqhz, amp;
 } egs[NUM_OPS];
