@@ -12,4 +12,4 @@ SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 include $(SYSTEM_FILES_DIR)/Makefile
 
 format: *.cpp
-	clang-format -i *.cpp
+	clang-format -i *.cpp *.h

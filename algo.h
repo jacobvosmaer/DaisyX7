@@ -3,6 +3,9 @@
 
 #define NUM_OPS 6
 
+/* Algorithm data comes from
+ * https://www.righto.com/2021/12/yamaha-dx7-chip-reverse-engineering.html#fn:alg-table.
+ * It's ordered from OP6 down to OP1. */
 struct algorithm {
   int sel, a, c, d, com;
 } algorithms[][NUM_OPS] = {
