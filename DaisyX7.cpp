@@ -21,17 +21,17 @@ struct {
 } ops;
 
 /* The EGS ASIC (YM2129) is responsible for providing frequency and amplitude
- * data to the OPS. TODO: modulate frequency and amplitude so we can produces
+ * data to the OPS. TODO: modulate frequency and amplitude so we can produce
  * notes instead of drones. */
 struct {
-  float freqhz, amp;
+  float freq, amp;
 } egs[NUM_OPS];
 
-float egs_freq(int op) {
+float egs_setfreq(int op, float hz) {
   if (op < 0 || op >= nelem(egs))
     return 0;
 
-  return egs[op].freqhz / hw.AudioSampleRate();
+  return egs[op].freq = hz / hw.AudioSampleRate();
 }
 
 float ops_feedback(void) {
@@ -94,7 +94,7 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
   for (int j = 0; j < (int)size; j += 2) {
     float sample;
     for (int i = nelem(egs); i--;) {
-      ops.phase[i] += egs_freq(i);
+      ops.phase[i] += egs[i].freq;
       if (ops.phase[i] > 1)
         ops.phase[i] -= 2;
       sample = ops_update(i);
@@ -106,8 +106,8 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
 int main(void) {
   hw.Init();
 
-  ops.algo = 0;        /* Algorithm 1 */
-  egs[5].freqhz = 110; /* Operator 1: 220Hz, full volume */
+  ops.algo = 0; /* Algorithm 1 */
+  egs_setfreq(5, 110);
   egs[5].amp = 1;
 
   hw.StartAudio(AudioCallback);
