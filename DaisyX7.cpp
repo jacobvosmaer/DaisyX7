@@ -31,6 +31,10 @@ float hztofreq(float hz) { return hz / hw.AudioSampleRate(); }
 
 float ops_feedback(void) { return hw.knob2.Process(); }
 
+struct algorithm ops_algo(int i) {
+  return algorithms[ops.algo][i % nelem(algorithms[0])];
+}
+
 void ops_update(int i) {
   if (i < 0 || i >= nelem(ops.phase) || ops.algo < 0 ||
       ops.algo >= nelem(algorithms))
@@ -40,20 +44,16 @@ void ops_update(int i) {
   if (ops.phase[i] > 1)
     ops.phase[i] -= 2;
 
-  /* Reminder: the operators are numbered in reverse from the DX7 UI. Index 0 is
-   * OP6, 1 is OP5, ..., 5 is OP1. */
-  struct algorithm algo = algorithms[ops.algo][i],
-                   previous_algo =
-                       algorithms[ops.algo][(i - 1) % nelem(algorithms[0])];
-
   /* Calculate sample for current operator i based on ops.mod from operator i-1.
    * Because of the way the real OPS is implemented, the COM value we need
-   * for this is stored on the algorithm of operator i-1.
-   */
+   * for this is stored on the algorithm of operator i-1. Reminder: the
+   * operators are numbered in reverse from the DX7 UI. Index 0 is OP6, 1 is
+   * OP5, ..., 5 is OP1. */
   float sample = sinf(pi * (ops.phase[i] + ops.mod)) * egs[i].amp /
-                 (float)(1 + previous_algo.com);
+                 (float)(1 + ops_algo(i - 1).com);
 
   /* Calculate ops.mod and ops.mem for use in next call to ops_update() */
+  struct algorithm algo = ops_algo(i);
   if (algo.a) {
     ops.feedback[1] = ops.feedback[0];
     ops.feedback[0] = sample;
