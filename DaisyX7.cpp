@@ -49,7 +49,7 @@ void ops_update(int i) {
    * for this is stored on the algorithm of operator i-1. Reminder: the
    * operators are numbered in reverse from the DX7 UI. Index 0 is OP6, 1 is
    * OP5, ..., 5 is OP1. */
-  float sample = sinf(pi * (ops.phase[i] + ops.mod)) * egs[i].amp /
+  float sample = sinf(pi * (ops.phase[i] + 3.85 * ops.mod)) * egs[i].amp /
                  (float)(1 + ops_algo(i - 1).com);
 
   /* Calculate ops.mod and ops.mem for use in next call to ops_update() */
