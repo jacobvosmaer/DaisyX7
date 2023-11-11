@@ -29,10 +29,7 @@ struct {
 
 float hztofreq(float hz) { return hz / hw.AudioSampleRate(); }
 
-float ops_feedback(void) {
-  /* TODO return scale factor based on ops.feedback_level */
-  return 0;
-}
+float ops_feedback(void) { return hw.knob2.Process(); }
 
 void ops_update(int i) {
   if (i < 0 || i >= nelem(ops.phase) || ops.algo < 0 ||
@@ -104,7 +101,7 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
 int main(void) {
   hw.Init();
 
-  ops.algo = 0; /* Algorithm 1 */
+  ops.algo = 1; /* Algorithm 1 */
   egs[5].freq = hztofreq(220);
   egs[5].amp = 1;
   egs[4].freq = hztofreq(440);
