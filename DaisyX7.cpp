@@ -34,22 +34,24 @@ float ops_feedback(void) {
   return 0;
 }
 
-float ops_update(int i) {
+void ops_update(int i) {
   if (i < 0 || i >= nelem(ops.phase) || ops.algo < 0 ||
       ops.algo >= nelem(algorithms))
-    return 0;
+    return;
 
   ops.phase[i] += egs[i].freq;
   if (ops.phase[i] > 1)
     ops.phase[i] -= 2;
 
+  /* Reminder: the operators are numbered in reverse from the DX7 UI. Index 0 is
+   * OP6, 1 is OP5, ..., 5 is OP1. */
   struct algorithm algo = algorithms[ops.algo][i],
                    previous_algo =
-                       algorithms[ops.algo][(i + 1) % nelem(algorithms[0])];
+                       algorithms[ops.algo][(i - 1) % nelem(algorithms[0])];
 
-  /* Calculate sample for current operator i based on ops.mod from operator i+1.
+  /* Calculate sample for current operator i based on ops.mod from operator i-1.
    * Because of the way the real OPS is implemented, the COM value we need
-   * for this is stored on the algorithm of operator i+1.
+   * for this is stored on the algorithm of operator i-1.
    */
   float sample = sinf(pi * (ops.phase[i] + ops.mod)) * egs[i].amp /
                  (float)(1 + previous_algo.com);
@@ -84,7 +86,6 @@ float ops_update(int i) {
   }
 
   ops.mem = newmem;
-  return ops.mem;
 }
 
 static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
