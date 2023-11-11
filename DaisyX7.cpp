@@ -90,6 +90,9 @@ float ops_update(int i) {
 static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
                           AudioHandle::InterleavingOutputBuffer out,
                           size_t size) {
+  hw.ProcessAllControls();
+  egs[4].amp = hw.knob1.Process();
+
   for (int j = 0; j < (int)size; j += 2) {
     for (int i = 0; i < nelem(ops.phase); i++)
       ops_update(i);
@@ -101,9 +104,12 @@ int main(void) {
   hw.Init();
 
   ops.algo = 0; /* Algorithm 1 */
-  egs[5].freq = hztofreq(110);
+  egs[5].freq = hztofreq(220);
   egs[5].amp = 1;
+  egs[4].freq = hztofreq(440);
+  egs[4].amp = 0.5;
 
+  hw.StartAdc();
   hw.StartAudio(AudioCallback);
 
   while (1)
