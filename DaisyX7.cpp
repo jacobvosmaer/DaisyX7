@@ -27,12 +27,7 @@ struct {
   float freq, amp;
 } egs[NUM_OPS];
 
-float egs_setfreq(int op, float hz) {
-  if (op < 0 || op >= nelem(egs))
-    return 0;
-
-  return egs[op].freq = hz / hw.AudioSampleRate();
-}
+float hztofreq(float hz) { return hz / hw.AudioSampleRate(); }
 
 float ops_feedback(void) {
   /* TODO return scale factor based on ops.feedback_level */
@@ -40,22 +35,26 @@ float ops_feedback(void) {
 }
 
 float ops_update(int i) {
-  if (i < 0 || i >= nelem(algorithms[0]))
+  if (i < 0 || i >= nelem(ops.phase) || ops.algo < 0 ||
+      ops.algo >= nelem(algorithms))
     return 0;
+
+  ops.phase[i] += egs[i].freq;
+  if (ops.phase[i] > 1)
+    ops.phase[i] -= 2;
 
   struct algorithm algo = algorithms[ops.algo][i],
                    previous_algo =
                        algorithms[ops.algo][(i + 1) % nelem(algorithms[0])];
 
   /* Calculate sample for current operator i based on ops.mod from operator i+1.
-   * For technical reasons the COM value we need for this is stored on the
-   * algorithm of operator i+1.
+   * Because of the way the real OPS is implemented, the COM value we need
+   * for this is stored on the algorithm of operator i+1.
    */
   float sample = sinf(pi * (ops.phase[i] + ops.mod)) * egs[i].amp /
                  (float)(1 + previous_algo.com);
 
   /* Calculate ops.mod and ops.mem for use in next call to ops_update() */
-
   if (algo.a) {
     ops.feedback[1] = ops.feedback[0];
     ops.feedback[0] = sample;
@@ -92,14 +91,9 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
                           AudioHandle::InterleavingOutputBuffer out,
                           size_t size) {
   for (int j = 0; j < (int)size; j += 2) {
-    float sample;
-    for (int i = nelem(egs); i--;) {
-      ops.phase[i] += egs[i].freq;
-      if (ops.phase[i] > 1)
-        ops.phase[i] -= 2;
-      sample = ops_update(i);
-    }
-    out[j] = out[j + 1] = sample;
+    for (int i = 0; i < nelem(ops.phase); i++)
+      ops_update(i);
+    out[j] = out[j + 1] = ops.mem;
   }
 }
 
@@ -107,7 +101,7 @@ int main(void) {
   hw.Init();
 
   ops.algo = 0; /* Algorithm 1 */
-  egs_setfreq(5, 110);
+  egs[5].freq = hztofreq(110);
   egs[5].amp = 1;
 
   hw.StartAudio(AudioCallback);
