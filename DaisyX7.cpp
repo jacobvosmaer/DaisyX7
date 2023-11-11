@@ -78,7 +78,7 @@ void ops_update(int i) {
     ops.mod = ops.feedback[0];
     break;
   case 5:
-    ops.mod = ops_feedback() * (ops.feedback[0] + ops.feedback[1]) / 2.0;
+    ops.mod = ops_feedback() * (ops.feedback[0] + ops.feedback[1]) / 6.0;
     break;
   }
 
