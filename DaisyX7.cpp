@@ -17,7 +17,6 @@ struct {
   float feedback[2];
   float mem;
   int algo;
-  int feedbacklevel;
 } ops;
 
 /* The EGS ASIC (YM2129) is responsible for providing frequency and amplitude
@@ -49,7 +48,8 @@ void ops_update(int i) {
    * for this is stored on the algorithm of operator i-1. Reminder: the
    * operators are numbered in reverse from the DX7 UI. Index 0 is OP6, 1 is
    * OP5, ..., 5 is OP1. */
-  float sample = sinf(pi * (ops.phase[i] + 3.85 * ops.mod)) * egs[i].amp /
+  float maxmod = 3.85; /* Picked by ear comparing with TX7 */
+  float sample = sinf(pi * (ops.phase[i] + maxmod * ops.mod)) * egs[i].amp /
                  (float)(1 + ops_algo(i - 1).com);
 
   /* Calculate ops.mod and ops.mem for use in next call to ops_update() */
@@ -78,7 +78,8 @@ void ops_update(int i) {
     ops.mod = ops.feedback[0];
     break;
   case 5:
-    ops.mod = ops_feedback() * (ops.feedback[0] + ops.feedback[1]) / 6.0;
+    float fbscale = 6.0; /* Picked by ear */
+    ops.mod = ops_feedback() * (ops.feedback[0] + ops.feedback[1]) / fbscale;
     break;
   }
 
@@ -101,11 +102,10 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
 int main(void) {
   hw.Init();
 
-  ops.algo = 1; /* Algorithm 1 */
+  ops.algo = 1;
   egs[5].freq = hztofreq(220);
   egs[5].amp = 1;
   egs[4].freq = hztofreq(440);
-  egs[4].amp = 0.5;
 
   hw.StartAdc();
   hw.StartAudio(AudioCallback);
