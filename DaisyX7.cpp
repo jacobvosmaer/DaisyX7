@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define nelem(x) (int)(sizeof(x) / sizeof(*x))
-float pi = 3.141592653;
+float pi = 3.141592653, semi_up = 1.05946309436, semi_down = 0.943874312682;
 
 using namespace daisy;
 
@@ -91,6 +91,10 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
                           size_t size) {
   hw.ProcessAllControls();
   egs[4].amp = hw.knob1.Process();
+  int enc = hw.encoder.Increment();
+  if (enc)
+    for (int i = 0; i < nelem(egs); i++)
+      egs[i].freq *= (enc > 0) ? semi_up : semi_down;
 
   for (int j = 0; j < (int)size; j += 2) {
     for (int i = 0; i < nelem(ops.phase); i++)
