@@ -17,6 +17,7 @@ struct {
   float feedback[2];
   float mem;
   int algo;
+  float feedback_level;
 } ops;
 
 /* The EGS ASIC (YM2129) is responsible for providing frequency and amplitude
@@ -27,8 +28,6 @@ struct {
 } egs[NUM_OPS];
 
 float hztofreq(float hz) { return hz / hw.AudioSampleRate(); }
-
-float ops_feedback(void) { return hw.knob2.Process(); }
 
 struct algorithm ops_algo(int i) {
   return algorithms[ops.algo][i % nelem(algorithms[0])];
@@ -79,7 +78,8 @@ void ops_update(int i) {
     break;
   case 5:
     float fbscale = 6.0; /* Picked by ear */
-    ops.mod = ops_feedback() * (ops.feedback[0] + ops.feedback[1]) / fbscale;
+    ops.mod =
+        ops.feedback_level * (ops.feedback[0] + ops.feedback[1]) / fbscale;
     break;
   }
 
@@ -90,7 +90,10 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
                           AudioHandle::InterleavingOutputBuffer out,
                           size_t size) {
   hw.ProcessAllControls();
+
   egs[4].amp = hw.knob1.Process();
+  ops.feedback_level = hw.knob2.Process();
+
   int enc = hw.encoder.Increment();
   if (enc)
     for (int i = 0; i < nelem(egs); i++)
