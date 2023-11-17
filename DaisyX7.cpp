@@ -1,5 +1,5 @@
 #include "algo.h"
-#include "daisy_pod.h"
+#include "daisy_field.h"
 #include <math.h>
 #include <string.h>
 
@@ -8,7 +8,7 @@ float pi = 3.141592653, semi_up = 1.05946309436, semi_down = 0.943874312682;
 
 using namespace daisy;
 
-DaisyPod hw;
+DaisyField hw;
 
 /* The OPS ASIC (YM2128) implements the digital oscillators of the DX7. */
 struct {
@@ -91,13 +91,8 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
                           size_t size) {
   hw.ProcessAllControls();
 
-  egs[4].amp = hw.knob1.Process();
-  ops.feedback_level = hw.knob2.Process();
-
-  int enc = hw.encoder.Increment();
-  if (enc)
-    for (int i = 0; i < nelem(egs); i++)
-      egs[i].freq *= (enc > 0) ? semi_up : semi_down;
+  egs[4].amp = hw.knob[0].Process();
+  ops.feedback_level = hw.knob[1].Process();
 
   for (int j = 0; j < (int)size; j += 2) {
     for (int i = 0; i < nelem(ops.phase); i++)
