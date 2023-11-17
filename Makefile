@@ -3,6 +3,7 @@ TARGET = DaisyX7
 
 # Sources
 CPP_SOURCES = DaisyX7.cpp
+LDFLAGS += -u _printf_float
 
 # Library Locations
 LIBDAISY_DIR = ./libDaisy

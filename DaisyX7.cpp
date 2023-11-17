@@ -16,7 +16,7 @@ struct {
   float mod;
   float feedback[2];
   float mem;
-  int algo;
+  uint8_t algo;
   float feedback_level;
 } ops;
 
@@ -34,10 +34,6 @@ struct algorithm ops_algo(int i) {
 }
 
 void ops_update(int i) {
-  if (i < 0 || i >= nelem(ops.phase) || ops.algo < 0 ||
-      ops.algo >= nelem(algorithms))
-    return;
-
   ops.phase[i] += egs[i].freq;
   if (ops.phase[i] > 1)
     ops.phase[i] -= 2;
@@ -101,9 +97,11 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
   }
 }
 
+enum { columns = 18, rows = 5 };
+
 int main(void) {
   hw.Init();
-
+  hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_96KHZ);
   ops.algo = 1;
   egs[5].freq = hztofreq(220);
   egs[5].amp = 1;
@@ -112,6 +110,13 @@ int main(void) {
   hw.StartAdc();
   hw.StartAudio(AudioCallback);
 
-  while (1)
-    ;
+  while (1) {
+    char line[columns + 1];
+
+    hw.display.SetCursor(0, 0);
+    snprintf(line, sizeof(line), "algo=%d", ops.algo);
+    hw.display.WriteString(line, Font_6x8, true);
+
+    hw.display.Update();
+  }
 }
