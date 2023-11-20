@@ -10,6 +10,8 @@ using namespace daisy;
 
 DaisyField hw;
 
+enum { OP6, OP5, OP4, OP3, OP2, OP1 };
+
 /* The OPS ASIC (YM2128) implements the digital oscillators of the DX7. */
 struct {
   float phase[NUM_OPS];
@@ -82,13 +84,21 @@ void ops_update(int i) {
   ops.mem = newmem;
 }
 
+struct {
+  float base;
+  float mult[NUM_OPS];
+} frequency;
+
 static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
                           AudioHandle::InterleavingOutputBuffer out,
                           size_t size) {
   hw.ProcessAllControls();
 
-  egs[4].amp = hw.knob[0].Process();
+  egs[OP2].amp = hw.knob[0].Process();
   ops.feedback_level = hw.knob[1].Process();
+  frequency.base = 20.0 * powf(2.0, 14.0 * hw.knob[7].Process());
+  for (int i = 0; i < nelem(frequency.mult); i++)
+    egs[i].freq = hztofreq(frequency.mult[i] * frequency.base);
 
   for (int j = 0; j < (int)size; j += 2) {
     for (int i = 0; i < nelem(ops.phase); i++)
@@ -101,11 +111,13 @@ enum { columns = 18, rows = 5 };
 
 int main(void) {
   hw.Init();
-  hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_96KHZ);
+  hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
   ops.algo = 1;
-  egs[5].freq = hztofreq(220);
-  egs[5].amp = 1;
-  egs[4].freq = hztofreq(440);
+  egs[OP1].freq = hztofreq(220);
+  egs[OP1].amp = 1;
+
+  for (int i = 0; i < nelem(frequency.mult); i++)
+    frequency.mult[i] = 1;
 
   hw.StartAdc();
   hw.StartAudio(AudioCallback);
@@ -118,5 +130,13 @@ int main(void) {
     hw.display.WriteString(line, Font_6x8, true);
 
     hw.display.Update();
+
+    if (hw.sw[0].Pressed()) {
+      hw.led_driver.SetAllTo(1.0f);
+    } else {
+      hw.led_driver.SetAllTo(0.0f);
+    }
+
+    hw.led_driver.SwapBuffersAndTransmit();
   }
 }
