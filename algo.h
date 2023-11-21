@@ -1,7 +1,7 @@
 #ifndef ALGO_H
 #define ALGO_H
 
-#define NUM_OPS 6
+enum { OP6, OP5, OP4, OP3, OP2, OP1, NUM_OPS };
 
 /* Algorithm data comes from
  * https://www.righto.com/2021/12/yamaha-dx7-chip-reverse-engineering.html#fn:alg-table.

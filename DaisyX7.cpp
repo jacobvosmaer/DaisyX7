@@ -10,7 +10,31 @@ using namespace daisy;
 
 DaisyField hw;
 
-enum { OP6, OP5, OP4, OP3, OP2, OP1 };
+struct vknob {
+  float init, last;
+  int idx;
+};
+
+float vknob_raw(struct vknob *vk) { return hw.knob[vk->idx].Process(); }
+void vknob_enable(struct vknob *vk) { vk->init = vknob_raw(vk); }
+float vknob_value(struct vknob *vk) {
+  float current = vknob_raw(vk);
+  if (fabsf(vk->init - current) > 0.01)
+    vk->last = current;
+  return vk->last;
+}
+
+struct {
+  struct vknob amp[NUM_OPS];
+} ui;
+
+void ui_init(void) {
+  int i;
+  for (i = 0; i < nelem(ui.amp); i++)
+    ui.amp[i].idx = DaisyField::KNOB_1;
+
+  hw.knob[0].SetCoeff(1.0f);
+}
 
 /* The OPS ASIC (YM2128) implements the digital oscillators of the DX7. */
 struct {
@@ -94,7 +118,15 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
                           size_t size) {
   hw.ProcessAllControls();
 
-  egs[OP2].amp = hw.knob[0].Process();
+  for (int i = 0; i < nelem(ui.amp); i++) {
+    int key = 8 + i;
+    int op = 5 - i;
+    if (hw.KeyboardRisingEdge(key))
+      vknob_enable(&ui.amp[i]);
+    if (hw.KeyboardState(key))
+      egs[op].amp = vknob_value(&ui.amp[i]);
+  }
+
   ops.feedback_level = hw.knob[1].Process();
   frequency.base = 20.0 * powf(2.0, 14.0 * hw.knob[7].Process());
   for (int i = 0; i < nelem(frequency.mult); i++)
@@ -109,9 +141,12 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
 
 enum { columns = 18, rows = 5 };
 
+int keytoled(int key) { return key >= 8 ? key - 8 : 15 - key; }
+
 int main(void) {
   hw.Init();
   hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
+  ui_init();
   ops.algo = 1;
   egs[OP1].freq = hztofreq(220);
   egs[OP1].amp = 1;
@@ -131,11 +166,9 @@ int main(void) {
 
     hw.display.Update();
 
-    if (hw.sw[0].Pressed()) {
-      hw.led_driver.SetAllTo(1.0f);
-    } else {
-      hw.led_driver.SetAllTo(0.0f);
-    }
+    /* key 0: B1, key 8: A1 */
+    for (int i = 0; i < 16; i++)
+      hw.led_driver.SetLed(keytoled(i), hw.KeyboardState(i) ? 1.0f : 0.0f);
 
     hw.led_driver.SwapBuffersAndTransmit();
   }
