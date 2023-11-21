@@ -10,6 +10,9 @@ using namespace daisy;
 
 DaisyField hw;
 
+int keytoggle[16];
+int keytoled(int key) { return key >= 8 ? key - 8 : 15 - key; }
+
 struct vknob {
   float init, last;
   int idx;
@@ -26,12 +29,17 @@ float vknob_value(struct vknob *vk) {
 
 struct {
   struct vknob amp[NUM_OPS];
+  struct vknob mult[NUM_OPS];
+  int op;
 } ui;
 
 void ui_init(void) {
-  int i;
-  for (i = 0; i < nelem(ui.amp); i++)
+  for (int i = 0; i < nelem(ui.amp); i++)
     ui.amp[i].idx = DaisyField::KNOB_1;
+  for (int i = 0; i < nelem(ui.mult); i++) {
+    ui.mult[i].idx = DaisyField::KNOB_2;
+    ui.mult[i].last = 1;
+  }
 
   hw.knob[0].SetCoeff(1.0f);
 }
@@ -113,21 +121,32 @@ struct {
   float mult[NUM_OPS];
 } frequency;
 
+float multcoarse(float val) {
+  int m = 31.f * val;
+  if (!m)
+    m = 0.5;
+  return m;
+}
+
 static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
                           AudioHandle::InterleavingOutputBuffer out,
                           size_t size) {
   hw.ProcessAllControls();
 
-  for (int i = 0; i < nelem(ui.amp); i++) {
+  for (int i = 0; i < NUM_OPS; i++) {
     int key = 8 + i;
     int op = 5 - i;
-    if (hw.KeyboardRisingEdge(key))
+    if (hw.KeyboardRisingEdge(key)) {
       vknob_enable(&ui.amp[i]);
-    if (hw.KeyboardState(key))
+      keytoggle[key] = 1 - keytoggle[key];
+    }
+    if (keytoggle[key]) {
       egs[op].amp = vknob_value(&ui.amp[i]);
+      frequency.mult[op] = multcoarse(vknob_value(&ui.mult[i]));
+    }
   }
 
-  ops.feedback_level = hw.knob[1].Process();
+  ops.feedback_level = hw.knob[6].Process();
   frequency.base = 20.0 * powf(2.0, 14.0 * hw.knob[7].Process());
   for (int i = 0; i < nelem(frequency.mult); i++)
     egs[i].freq = hztofreq(frequency.mult[i] * frequency.base);
@@ -140,8 +159,6 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
 }
 
 enum { columns = 18, rows = 5 };
-
-int keytoled(int key) { return key >= 8 ? key - 8 : 15 - key; }
 
 int main(void) {
   hw.Init();
@@ -167,8 +184,8 @@ int main(void) {
     hw.display.Update();
 
     /* key 0: B1, key 8: A1 */
-    for (int i = 0; i < 16; i++)
-      hw.led_driver.SetLed(keytoled(i), hw.KeyboardState(i) ? 1.0f : 0.0f);
+    for (int i = 0; i < nelem(keytoggle); i++)
+      hw.led_driver.SetLed(keytoled(i), (float)keytoggle[i]);
 
     hw.led_driver.SwapBuffersAndTransmit();
   }
