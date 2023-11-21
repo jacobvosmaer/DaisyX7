@@ -162,7 +162,7 @@ enum { columns = 18, rows = 5 };
 
 int main(void) {
   hw.Init();
-  hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
+  hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_96KHZ);
   ui_init();
   ops.algo = 1;
   egs[OP1].freq = hztofreq(220);
