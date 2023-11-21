@@ -123,9 +123,7 @@ struct {
 
 float multcoarse(float val) {
   int m = 31.f * val;
-  if (!m)
-    m = 0.5;
-  return m;
+  return m ? (float)m : 0.5f;
 }
 
 static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
@@ -165,8 +163,6 @@ int main(void) {
   hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_96KHZ);
   ui_init();
   ops.algo = 1;
-  egs[OP1].freq = hztofreq(220);
-  egs[OP1].amp = 1;
 
   for (int i = 0; i < nelem(frequency.mult); i++)
     frequency.mult[i] = 1;
