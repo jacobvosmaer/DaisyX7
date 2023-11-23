@@ -107,9 +107,9 @@ void ops_update(int i) {
     ops.mod = ops.feedback[0];
     break;
   case 5:
-    float fbscale = 6.0; /* Picked by ear */
+    float fbscale = 1.f / 6.0; /* Picked by ear */
     ops.mod =
-        ops.feedback_level * (ops.feedback[0] + ops.feedback[1]) / fbscale;
+        ops.feedback_level * (ops.feedback[0] + ops.feedback[1]) * fbscale;
     break;
   }
 
