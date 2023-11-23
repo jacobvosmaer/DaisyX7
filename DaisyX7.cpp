@@ -143,6 +143,11 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
       frequency.mult[op] = multcoarse(vknob_value(&ui.mult[i]));
     }
   }
+  if (hw.sw[0].RisingEdge())
+    ops.algo--;
+  else if (hw.sw[1].RisingEdge())
+    ops.algo++;
+  ops.algo %= nelem(algorithms);
 
   ops.feedback_level = hw.knob[6].Process();
   frequency.base = 20.0 * powf(2.0, 14.0 * hw.knob[7].Process());
@@ -162,7 +167,6 @@ int main(void) {
   hw.Init();
   hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_96KHZ);
   ui_init();
-  ops.algo = 1;
 
   for (int i = 0; i < nelem(frequency.mult); i++)
     frequency.mult[i] = 1;
@@ -174,9 +178,8 @@ int main(void) {
     char line[columns + 1];
 
     hw.display.SetCursor(0, 0);
-    snprintf(line, sizeof(line), "algo=%d", ops.algo);
+    snprintf(line, sizeof(line), "algo=%02d", ops.algo + 1);
     hw.display.WriteString(line, Font_6x8, true);
-
     hw.display.Update();
 
     /* key 0: B1, key 8: A1 */
