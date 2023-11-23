@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define nelem(x) (int)(sizeof(x) / sizeof(*x))
-float pi = 3.141592653, semi_up = 1.05946309436, semi_down = 0.943874312682;
+float pi = 3.141592653;
 
 using namespace daisy;
 
