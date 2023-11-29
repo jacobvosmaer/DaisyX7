@@ -38,10 +38,12 @@ void ui_init(void) {
     ui.amp[i].idx = DaisyField::KNOB_1;
   for (int i = 0; i < nelem(ui.mult); i++) {
     ui.mult[i].idx = DaisyField::KNOB_2;
-    ui.mult[i].last = 1;
+    ui.mult[i].last = 1.f / 31.f;
   }
+  ui.amp[0].last = 1;
 
-  hw.knob[0].SetCoeff(1.0f);
+  for (int i = 0; i < DaisyField::KNOB_LAST; i++)
+    hw.knob[i].SetCoeff(0.5f);
 }
 
 /* The OPS ASIC (YM2128) implements the digital oscillators of the DX7. */
@@ -136,6 +138,7 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
     int op = 5 - i;
     if (hw.KeyboardRisingEdge(key)) {
       vknob_enable(&ui.amp[i]);
+      vknob_enable(&ui.mult[i]);
       keytoggle[key] = 1 - keytoggle[key];
     }
     if (keytoggle[key]) {
@@ -167,9 +170,6 @@ int main(void) {
   hw.Init();
   hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_96KHZ);
   ui_init();
-
-  for (int i = 0; i < nelem(frequency.mult); i++)
-    frequency.mult[i] = 1;
 
   hw.StartAdc();
   hw.StartAudio(AudioCallback);
