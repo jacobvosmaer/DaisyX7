@@ -4,6 +4,10 @@
 #include <string.h>
 
 #define nelem(x) (int)(sizeof(x) / sizeof(*x))
+#undef assert
+#define assert(x)                                                              \
+  if (!(x))                                                                    \
+  __builtin_trap()
 float pi = 3.141592653;
 
 using namespace daisy;
@@ -65,9 +69,12 @@ struct {
 
 float hztofreq(float hz) { return hz / hw.AudioSampleRate(); }
 
-struct algorithm ops_algo(int i) {
+struct algorithm ops_algo(uint8_t i) {
   return algorithms[ops.algo][i % nelem(algorithms[0])];
 }
+
+float comtab[] = {1.0 / 1.0, 1.0 / 2.0, 1.0 / 3.0,
+                  1.0 / 4.0, 1.0 / 5.0, 1.0 / 6.0};
 
 void ops_update(int i) {
   ops.phase[i] += egs[i].freq;
@@ -80,8 +87,8 @@ void ops_update(int i) {
    * operators are numbered in reverse from the DX7 UI. Index 0 is OP6, 1 is
    * OP5, ..., 5 is OP1. */
   float maxmod = 3.85; /* Picked by ear comparing with TX7 */
-  float sample = sinf(pi * (ops.phase[i] + maxmod * ops.mod)) * egs[i].amp /
-                 (float)(1 + ops_algo(i - 1).com);
+  float sample = sinf(pi * (ops.phase[i] + maxmod * ops.mod)) * egs[i].amp *
+                 comtab[ops_algo(i - 1).com];
 
   /* Calculate ops.mod and ops.mem for use in next call to ops_update() */
   struct algorithm algo = ops_algo(i);
