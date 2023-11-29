@@ -35,17 +35,21 @@ float vknob_value(struct vknob *vk) {
 
 struct {
   struct vknob amp[NUM_OPS];
-  struct vknob mult[NUM_OPS];
+  struct vknob multcoarse[NUM_OPS];
+  struct vknob multfine[NUM_OPS];
   int op;
 } ui;
 
 void ui_init(void) {
   for (int i = 0; i < nelem(ui.amp); i++)
     ui.amp[i].idx = DaisyField::KNOB_1;
-  for (int i = 0; i < nelem(ui.mult); i++) {
-    ui.mult[i].idx = DaisyField::KNOB_2;
-    ui.mult[i].last = 1.f / 31.f;
+  for (int i = 0; i < nelem(ui.multcoarse); i++) {
+    ui.multcoarse[i].idx = DaisyField::KNOB_2;
+    ui.multcoarse[i].last = 1.f / 31.f;
   }
+  for (int i = 0; i < nelem(ui.multfine); i++)
+    ui.multfine[i].idx = DaisyField::KNOB_3;
+
   ui.amp[0].last = 1;
 
   for (int i = 0; i < DaisyField::KNOB_LAST; i++)
@@ -147,12 +151,14 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
     int op = 5 - i;
     if (hw.KeyboardRisingEdge(key)) {
       vknob_enable(&ui.amp[i]);
-      vknob_enable(&ui.mult[i]);
+      vknob_enable(&ui.multcoarse[i]);
       keytoggle[key] = 1 - keytoggle[key];
     }
     if (keytoggle[key]) {
       egs[op].amp = vknob_value(&ui.amp[i]);
-      frequency.mult[op] = multcoarse(vknob_value(&ui.mult[i]));
+      float coarse = multcoarse(vknob_value(&ui.multcoarse[i]));
+      float fine = vknob_value(&ui.multfine[i]) * ((coarse < 1.0 ? 0.5 : 1.0));
+      frequency.mult[op] = coarse + fine;
     }
   }
   if (hw.sw[0].RisingEdge())
