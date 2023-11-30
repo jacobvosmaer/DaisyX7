@@ -141,26 +141,26 @@ float multcoarse(float val) {
   return m ? (float)m : 0.5f;
 }
 
-static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
-                          AudioHandle::InterleavingOutputBuffer out,
-                          size_t size) {
+int boot = 1;
+void ui_update(void) {
   hw.ProcessAllControls();
 
   for (int i = 0; i < NUM_OPS; i++) {
     int key = 8 + i;
     int op = 5 - i;
-    if (hw.KeyboardRisingEdge(key)) {
+    if (hw.KeyboardRisingEdge(key) || (boot && op == OP1)) {
+      boot = 0;
       vknob_enable(&ui.amp[i]);
       vknob_enable(&ui.multcoarse[i]);
-      keytoggle[key] = 1 - keytoggle[key];
+      keytoggle[key] = !keytoggle[key];
     }
     if (keytoggle[key]) {
       egs[op].amp = vknob_value(&ui.amp[i]);
-      float coarse = multcoarse(vknob_value(&ui.multcoarse[i]));
-      float fine = vknob_value(&ui.multfine[i]) * ((coarse < 1.0 ? 0.5 : 1.0));
-      frequency.mult[op] = coarse + fine;
+      frequency.mult[op] = multcoarse(vknob_value(&ui.multcoarse[i])) +
+                           2.0 * vknob_value(&ui.multfine[i]);
     }
   }
+
   if (hw.sw[0].RisingEdge())
     ops.algo--;
   else if (hw.sw[1].RisingEdge())
@@ -169,6 +169,12 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
 
   ops.feedback_level = hw.knob[6].Process();
   frequency.base = 20.0 * powf(2.0, 14.0 * hw.knob[7].Process());
+}
+
+static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
+                          AudioHandle::InterleavingOutputBuffer out,
+                          size_t size) {
+  ui_update();
   for (int i = 0; i < nelem(frequency.mult); i++)
     egs[i].freq = hztofreq(frequency.mult[i] * frequency.base);
 
