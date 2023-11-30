@@ -25,11 +25,12 @@ struct vknob {
 float vknob_raw(struct vknob *vk) { return hw.knob[vk->idx].Process(); }
 void vknob_enable(struct vknob *vk) { vk->init = vknob_raw(vk); }
 
-/* BUG sometimes this prevents a knob from going to 0. */
 float vknob_value(struct vknob *vk) {
   float current = vknob_raw(vk);
-  if (fabsf(vk->init - current) > 0.01)
+  if (fabsf(vk->init - current) > 0.01) {
     vk->last = current;
+    vk->init = -1.0;
+  }
   return vk->last;
 }
 
