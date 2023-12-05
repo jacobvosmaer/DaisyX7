@@ -152,6 +152,7 @@ void ui_update(void) {
       boot = 0;
       vknob_enable(&ui.amp[op]);
       vknob_enable(&ui.multcoarse[op]);
+      vknob_enable(&ui.multfine[op]);
       keytoggle[key] = 1;
       for (int i = 0; i < NUM_OPS; i++)
         if (i != op)
