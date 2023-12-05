@@ -51,8 +51,6 @@ void ui_init(void) {
   for (int i = 0; i < nelem(ui.multfine); i++)
     ui.multfine[i].idx = DaisyField::KNOB_3;
 
-  ui.amp[0].last = 1;
-
   for (int i = 0; i < DaisyField::KNOB_LAST; i++)
     hw.knob[i].SetCoeff(0.5f);
 }
@@ -142,23 +140,27 @@ float multcoarse(float val) {
   return m ? (float)m : 0.5f;
 }
 
+int optokey(int op) { return 13 - op; }
+
 int boot = 1;
 void ui_update(void) {
   hw.ProcessAllControls();
 
-  for (int i = 0; i < NUM_OPS; i++) {
-    int key = 8 + i;
-    int op = 5 - i;
+  for (int op = 0; op < NUM_OPS; op++) {
+    int key = optokey(op);
     if (hw.KeyboardRisingEdge(key) || (boot && op == OP1)) {
       boot = 0;
-      vknob_enable(&ui.amp[i]);
-      vknob_enable(&ui.multcoarse[i]);
-      keytoggle[key] = !keytoggle[key];
+      vknob_enable(&ui.amp[op]);
+      vknob_enable(&ui.multcoarse[op]);
+      keytoggle[key] = 1;
+      for (int i = 0; i < NUM_OPS; i++)
+        if (i != op)
+          keytoggle[optokey(i)] = 0;
     }
     if (keytoggle[key]) {
-      egs[op].amp = vknob_value(&ui.amp[i]);
-      frequency.mult[op] = multcoarse(vknob_value(&ui.multcoarse[i])) +
-                           2.0 * vknob_value(&ui.multfine[i]);
+      egs[op].amp = vknob_value(&ui.amp[op]);
+      frequency.mult[op] = multcoarse(vknob_value(&ui.multcoarse[op])) +
+                           2.0 * vknob_value(&ui.multfine[op]);
     }
   }
 
