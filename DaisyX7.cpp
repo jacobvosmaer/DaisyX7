@@ -112,12 +112,19 @@ struct {
   int op;
 } ui;
 
+struct {
+  float base;
+  float mult[NUM_OPS];
+  int fixed[NUM_OPS];
+} frequency;
+
 void ui_init(void) {
   for (int i = 0; i < nelem(ui.amp); i++)
     ui.amp[i].idx = DaisyField::KNOB_1;
   for (int i = 0; i < nelem(ui.multcoarse); i++) {
     ui.multcoarse[i].idx = DaisyField::KNOB_2;
     ui.multcoarse[i].last = 1.f / 31.f;
+    frequency.mult[i] = 1.f;
   }
   for (int i = 0; i < nelem(ui.multfine); i++)
     ui.multfine[i].idx = DaisyField::KNOB_3;
@@ -125,12 +132,6 @@ void ui_init(void) {
   for (int i = 0; i < DaisyField::KNOB_LAST; i++)
     hw.knob[i].SetCoeff(0.5f);
 }
-
-struct {
-  float base;
-  float mult[NUM_OPS];
-  int fixed[NUM_OPS];
-} frequency;
 
 float multcoarse(float val) {
   int m = 31.f * val;
@@ -206,14 +207,16 @@ int main(void) {
     char line[columns + 1];
 
     hw.display.SetCursor(0, 0);
-    snprintf(line, sizeof(line), "algo=%02d", ops.algo + 1);
+    snprintf(line, sizeof(line), "algo=%02d fb=%02d", ops.algo + 1,
+             (int)(ops.feedback_level * 100.f));
     hw.display.WriteString(line, Font_6x8, true);
     for (int i = 0; i < NUM_OPS; i++) {
       int x = 9 * (i + 1), op = 5 - i;
       hw.display.SetCursor(0, x);
       int freq = frequency.mult[op] * 100.f, amp = egs[op].amp * 100.f;
       snprintf(line, sizeof(line), "OP%d F=%2d.%02d%c L=%02d", i + 1,
-               freq / 100, freq % 100, frequency.fixed[op] ? 'f' : 'r', amp);
+               freq / 100, freq % 100,  frequency.fixed[op] ? 'f' : 'r' ,
+               amp);
       hw.display.WriteString(line, Font_6x8, true);
     }
     hw.display.Update();
