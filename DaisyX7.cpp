@@ -145,24 +145,20 @@ void ui_update(void) {
   hw.ProcessAllControls();
 
   for (int i = 0; i < NUM_OPS; i++) {
-    int key = optokey(i);
-    if (hw.KeyboardRisingEdge(key) || (boot && i == OP1)) {
+    if (hw.KeyboardRisingEdge(optokey(i)) || (boot && i == OP1)) {
       boot = 0;
       ui.op = i;
       vknob_enable(&ui.amp[i]);
       vknob_enable(&ui.multcoarse[i]);
       vknob_enable(&ui.multfine[i]);
-      keytoggle[key] = 1;
       for (int j = 0; j < NUM_OPS; j++)
-        if (j != i)
-          keytoggle[optokey(j)] = 0;
+        keytoggle[optokey(j)] = j == i;
     }
   }
 
-  int keyfixed = 7;
+  enum{ keyfixed = 7};
   if (hw.KeyboardRisingEdge(keyfixed))
-    frequency.fixed[ui.op] = !frequency.fixed[ui.op];
-
+    frequency.fixed[ui.op] ^= 1;
   keytoggle[keyfixed] = frequency.fixed[ui.op];
 
   egs[ui.op].amp = vknob_value(&ui.amp[ui.op]);
