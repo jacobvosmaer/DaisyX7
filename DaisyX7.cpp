@@ -10,7 +10,9 @@
   __builtin_trap()
 float pi = 3.141592653;
 
-/* The OPS ASIC (YM2128) implements the digital oscillators of the DX7. */
+/* The OPS ASIC (YM2128) implements the digital oscillators of the DX7. The ops
+ * struct contains the internal state of our simulation of the OPS, restricted
+ * to just one voice because this program is monophonic. */
 struct {
   float phase[NUM_OPS];
   float mod;
@@ -21,8 +23,10 @@ struct {
 } ops;
 
 /* The EGS ASIC (YM2129) is responsible for providing frequency and amplitude
- * data to the OPS. TODO: modulate frequency and amplitude so we can produce
- * notes instead of drones. */
+ * data to the OPS. This program does not simulate the EGS. From the point of
+ * view of the OPS, the EGS is a data bus that delivers pitch and amplitude data
+ * for each oscillator. That is also all what we use the egs struct below for.
+ */
 struct {
   float freq, amp;
 } egs[NUM_OPS];
@@ -88,6 +92,8 @@ DaisyField hw;
 int keytoggle[16];
 int keytoled(int key) { return key >= 8 ? key - 8 : 15 - key; }
 
+/* vknob is a "virtual knob". Multiple virtual knobs can point to the same
+ * physical knob. */
 struct vknob {
   float init, last;
   int idx;
