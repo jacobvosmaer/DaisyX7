@@ -208,6 +208,14 @@ int main(void) {
     hw.display.SetCursor(0, 0);
     snprintf(line, sizeof(line), "algo=%02d", ops.algo + 1);
     hw.display.WriteString(line, Font_6x8, true);
+    for (int i = 0; i < NUM_OPS; i++) {
+      int x = 9 * (i + 1), op = 5 - i;
+      hw.display.SetCursor(0, x);
+      int freq = frequency.mult[op] * 100.f, amp = egs[op].amp * 100.f;
+      snprintf(line, sizeof(line), "OP%d F=%2d.%02d%c L=%02d", i + 1,
+               freq / 100, freq % 100, frequency.fixed[op] ? 'f' : 'r', amp);
+      hw.display.WriteString(line, Font_6x8, true);
+    }
     hw.display.Update();
 
     /* key 0: B1, key 8: A1 */
