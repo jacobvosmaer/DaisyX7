@@ -133,6 +133,7 @@ void ops_update(int i) {
 struct {
   float base;
   float mult[NUM_OPS];
+  int fixed[NUM_OPS];
 } frequency;
 
 float multcoarse(float val) {
@@ -146,24 +147,30 @@ int boot = 1;
 void ui_update(void) {
   hw.ProcessAllControls();
 
-  for (int op = 0; op < NUM_OPS; op++) {
-    int key = optokey(op);
-    if (hw.KeyboardRisingEdge(key) || (boot && op == OP1)) {
+  for (int i = 0; i < NUM_OPS; i++) {
+    int key = optokey(i);
+    if (hw.KeyboardRisingEdge(key) || (boot && i == OP1)) {
       boot = 0;
-      vknob_enable(&ui.amp[op]);
-      vknob_enable(&ui.multcoarse[op]);
-      vknob_enable(&ui.multfine[op]);
+      ui.op = i;
+      vknob_enable(&ui.amp[i]);
+      vknob_enable(&ui.multcoarse[i]);
+      vknob_enable(&ui.multfine[i]);
       keytoggle[key] = 1;
-      for (int i = 0; i < NUM_OPS; i++)
-        if (i != op)
-          keytoggle[optokey(i)] = 0;
-    }
-    if (keytoggle[key]) {
-      egs[op].amp = vknob_value(&ui.amp[op]);
-      frequency.mult[op] = multcoarse(vknob_value(&ui.multcoarse[op])) +
-                           2.0 * vknob_value(&ui.multfine[op]);
+      for (int j = 0; j < NUM_OPS; j++)
+        if (j != i)
+          keytoggle[optokey(j)] = 0;
     }
   }
+
+  int fixedrel = 7;
+  if (hw.KeyboardRisingEdge(fixedrel))
+    frequency.fixed[ui.op] = !frequency.fixed[ui.op];
+
+  keytoggle[fixedrel] = frequency.fixed[ui.op];
+
+  egs[ui.op].amp = vknob_value(&ui.amp[ui.op]);
+  frequency.mult[ui.op] = multcoarse(vknob_value(&ui.multcoarse[ui.op])) +
+                          2.0 * vknob_value(&ui.multfine[ui.op]);
 
   if (hw.sw[0].RisingEdge())
     ops.algo--;
@@ -179,8 +186,10 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
                           AudioHandle::InterleavingOutputBuffer out,
                           size_t size) {
   ui_update();
-  for (int i = 0; i < nelem(frequency.mult); i++)
-    egs[i].freq = hztofreq(frequency.mult[i] * frequency.base);
+  for (int i = 0; i < nelem(frequency.mult); i++) {
+    float base = (frequency.fixed[i]) ? 4.f : frequency.base;
+    egs[i].freq = hztofreq(frequency.mult[i] * base);
+  }
 
   for (int j = 0; j < (int)size; j += 2) {
     for (int i = 0; i < nelem(ops.phase); i++)
