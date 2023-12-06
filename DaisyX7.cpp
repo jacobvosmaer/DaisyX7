@@ -10,8 +10,79 @@
   __builtin_trap()
 float pi = 3.141592653;
 
-using namespace daisy;
+/* The OPS ASIC (YM2128) implements the digital oscillators of the DX7. */
+struct {
+  float phase[NUM_OPS];
+  float mod;
+  float feedback[2];
+  float mem;
+  uint8_t algo;
+  float feedback_level;
+} ops;
 
+/* The EGS ASIC (YM2129) is responsible for providing frequency and amplitude
+ * data to the OPS. TODO: modulate frequency and amplitude so we can produce
+ * notes instead of drones. */
+struct {
+  float freq, amp;
+} egs[NUM_OPS];
+
+struct algorithm ops_algo(uint8_t i) {
+  return algorithms[ops.algo][i % nelem(algorithms[0])];
+}
+
+void ops_update(int i) {
+  ops.phase[i] += egs[i].freq;
+  if (ops.phase[i] > 1)
+    ops.phase[i] -= 2;
+
+  /* Calculate sample for current operator i based on ops.mod from operator i-1.
+   * Because of the way the real OPS is implemented, the COM value we need
+   * for this is stored on the algorithm of operator i-1. Reminder: the
+   * operators are numbered in reverse from the DX7 UI. Index 0 is OP6, 1 is
+   * OP5, ..., 5 is OP1. */
+  float maxmod = 3.85; /* Picked by ear comparing with TX7 */
+  float comtab[] = {1.0 / 1.0, 1.0 / 2.0, 1.0 / 3.0,
+                    1.0 / 4.0, 1.0 / 5.0, 1.0 / 6.0};
+  float sample = sinf(pi * (ops.phase[i] + maxmod * ops.mod)) * egs[i].amp *
+                 comtab[ops_algo(i - 1).com];
+
+  /* Calculate ops.mod and ops.mem for use in next call to ops_update() */
+  struct algorithm algo = ops_algo(i);
+  if (algo.a) {
+    ops.feedback[1] = ops.feedback[0];
+    ops.feedback[0] = sample;
+  }
+
+  float newmem = (float)algo.c * ops.mem + (float)algo.d * sample;
+
+  switch (algo.sel) {
+  case 0:
+    ops.mod = 0;
+    break;
+  case 1:
+    ops.mod = sample;
+    break;
+  case 2:
+    ops.mod = newmem;
+    break;
+  case 3:
+    ops.mod = ops.mem;
+    break;
+  case 4:
+    ops.mod = ops.feedback[0];
+    break;
+  case 5:
+    float fbscale = 1.f / 6.0; /* Picked by ear */
+    ops.mod =
+        ops.feedback_level * (ops.feedback[0] + ops.feedback[1]) * fbscale;
+    break;
+  }
+
+  ops.mem = newmem;
+}
+
+using namespace daisy;
 DaisyField hw;
 
 int keytoggle[16];
@@ -55,81 +126,6 @@ void ui_init(void) {
     hw.knob[i].SetCoeff(0.5f);
 }
 
-/* The OPS ASIC (YM2128) implements the digital oscillators of the DX7. */
-struct {
-  float phase[NUM_OPS];
-  float mod;
-  float feedback[2];
-  float mem;
-  uint8_t algo;
-  float feedback_level;
-} ops;
-
-/* The EGS ASIC (YM2129) is responsible for providing frequency and amplitude
- * data to the OPS. TODO: modulate frequency and amplitude so we can produce
- * notes instead of drones. */
-struct {
-  float freq, amp;
-} egs[NUM_OPS];
-
-float hztofreq(float hz) { return hz / hw.AudioSampleRate(); }
-
-struct algorithm ops_algo(uint8_t i) {
-  return algorithms[ops.algo][i % nelem(algorithms[0])];
-}
-
-float comtab[] = {1.0 / 1.0, 1.0 / 2.0, 1.0 / 3.0,
-                  1.0 / 4.0, 1.0 / 5.0, 1.0 / 6.0};
-
-void ops_update(int i) {
-  ops.phase[i] += egs[i].freq;
-  if (ops.phase[i] > 1)
-    ops.phase[i] -= 2;
-
-  /* Calculate sample for current operator i based on ops.mod from operator i-1.
-   * Because of the way the real OPS is implemented, the COM value we need
-   * for this is stored on the algorithm of operator i-1. Reminder: the
-   * operators are numbered in reverse from the DX7 UI. Index 0 is OP6, 1 is
-   * OP5, ..., 5 is OP1. */
-  float maxmod = 3.85; /* Picked by ear comparing with TX7 */
-  float sample = sinf(pi * (ops.phase[i] + maxmod * ops.mod)) * egs[i].amp *
-                 comtab[ops_algo(i - 1).com];
-
-  /* Calculate ops.mod and ops.mem for use in next call to ops_update() */
-  struct algorithm algo = ops_algo(i);
-  if (algo.a) {
-    ops.feedback[1] = ops.feedback[0];
-    ops.feedback[0] = sample;
-  }
-
-  float newmem = (float)algo.c * ops.mem + (float)algo.d * sample;
-
-  switch (algo.sel) {
-  case 0:
-    ops.mod = 0;
-    break;
-  case 1:
-    ops.mod = sample;
-    break;
-  case 2:
-    ops.mod = newmem;
-    break;
-  case 3:
-    ops.mod = ops.mem;
-    break;
-  case 4:
-    ops.mod = ops.feedback[0];
-    break;
-  case 5:
-    float fbscale = 1.f / 6.0; /* Picked by ear */
-    ops.mod =
-        ops.feedback_level * (ops.feedback[0] + ops.feedback[1]) * fbscale;
-    break;
-  }
-
-  ops.mem = newmem;
-}
-
 struct {
   float base;
   float mult[NUM_OPS];
@@ -142,6 +138,7 @@ float multcoarse(float val) {
 }
 
 int optokey(int op) { return 13 - op; }
+float hztofreq(float hz) { return hz / hw.AudioSampleRate(); }
 
 int boot = 1;
 void ui_update(void) {
@@ -162,11 +159,11 @@ void ui_update(void) {
     }
   }
 
-  int fixedrel = 7;
-  if (hw.KeyboardRisingEdge(fixedrel))
+  int keyfixed = 7;
+  if (hw.KeyboardRisingEdge(keyfixed))
     frequency.fixed[ui.op] = !frequency.fixed[ui.op];
 
-  keytoggle[fixedrel] = frequency.fixed[ui.op];
+  keytoggle[keyfixed] = frequency.fixed[ui.op];
 
   egs[ui.op].amp = vknob_value(&ui.amp[ui.op]);
   frequency.mult[ui.op] = multcoarse(vknob_value(&ui.multcoarse[ui.op])) +
@@ -180,16 +177,17 @@ void ui_update(void) {
 
   ops.feedback_level = hw.knob[6].Process();
   frequency.base = 20.0 * powf(2.0, 14.0 * hw.knob[7].Process());
+
+  for (int i = 0; i < nelem(frequency.mult); i++) {
+    float base = (frequency.fixed[i]) ? 4.f : frequency.base;
+    egs[i].freq = hztofreq(frequency.mult[i] * base);
+  }
 }
 
 static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
                           AudioHandle::InterleavingOutputBuffer out,
                           size_t size) {
   ui_update();
-  for (int i = 0; i < nelem(frequency.mult); i++) {
-    float base = (frequency.fixed[i]) ? 4.f : frequency.base;
-    egs[i].freq = hztofreq(frequency.mult[i] * base);
-  }
 
   for (int j = 0; j < (int)size; j += 2) {
     for (int i = 0; i < nelem(ops.phase); i++)
