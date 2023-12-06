@@ -156,7 +156,7 @@ void ui_update(void) {
     }
   }
 
-  enum{ keyfixed = 7};
+  enum { keyfixed = 7 };
   if (hw.KeyboardRisingEdge(keyfixed))
     frequency.fixed[ui.op] ^= 1;
   keytoggle[keyfixed] = frequency.fixed[ui.op];
