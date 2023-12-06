@@ -121,6 +121,7 @@ struct {
 void ui_init(void) {
   for (int i = 0; i < nelem(ui.amp); i++)
     ui.amp[i].idx = DaisyField::KNOB_1;
+  ui.amp[OP1].last = 1.f;
   for (int i = 0; i < nelem(ui.multcoarse); i++) {
     ui.multcoarse[i].idx = DaisyField::KNOB_2;
     ui.multcoarse[i].last = 1.f / 31.f;
@@ -213,10 +214,12 @@ int main(void) {
     for (int i = 0; i < NUM_OPS; i++) {
       int x = 9 * (i + 1), op = 5 - i;
       hw.display.SetCursor(0, x);
-      int freq = frequency.mult[op] * 100.f, amp = egs[op].amp * 100.f;
+      int freq = frequency.mult[op] * 100.f;
+      int amp = egs[op].amp * 100.f;
+      if (amp == 100)
+        amp = 99;
       snprintf(line, sizeof(line), "OP%d F=%2d.%02d%c L=%02d", i + 1,
-               freq / 100, freq % 100,  frequency.fixed[op] ? 'f' : 'r' ,
-               amp);
+               freq / 100, freq % 100, frequency.fixed[op] ? 'f' : 'r', amp);
       hw.display.WriteString(line, Font_6x8, true);
     }
     hw.display.Update();
