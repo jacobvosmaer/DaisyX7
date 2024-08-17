@@ -1,12 +1,12 @@
 #ifndef ALGO_H
 #define ALGO_H
 
-enum { OP6, OP5, OP4, OP3, OP2, OP1, NUM_OPS };
+#include "engine.h"
 
 /* Algorithm data comes from
  * https://www.righto.com/2021/12/yamaha-dx7-chip-reverse-engineering.html#fn:alg-table.
  * It's ordered from OP6 down to OP1. */
-struct algorithm {
+static struct algorithm {
   int sel, a, c, d, com;
 } algorithms[][NUM_OPS] = {
     {{1, 1, 0, 0, 0},
