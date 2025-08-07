@@ -42,7 +42,7 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
                           AudioHandle::InterleavingOutputBuffer out,
                           size_t size) {
   int i, j;
-  float pitchhz, op2base;
+  float pitchhz, op2base, indexcurve;
 
   hw.ProcessAllControls();
   button.Debounce();
@@ -52,7 +52,8 @@ static void AudioCallback(AudioHandle::InterleavingInputBuffer in,
   ops.feedback_level = cv(2) + cv(8);
   egs[OP1].amp = 1.0;
   egs[OP1].freq = hztofreq(pitchhz);
-  egs[OP2].amp = pinchzero(cv(7), 0.001);
+  indexcurve = 16;
+  egs[OP2].amp = powf(2.0, indexcurve * cv(7)) / (float)(1L << (int)indexcurve);
 
   op2base = toggle.Pressed() ? pitchhz : 4.0;
   egs[OP2].freq =
